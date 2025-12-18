@@ -1,0 +1,11 @@
+1)make a seperate ui to make Env and while creating image join the env with it .direct env would lead to security risk
+
+2)this are all where websocket is used and ofcourse database should be persistent.
+| What you need                               | Source             |
+| ------------------------------------------- | ------------------ |
+| Container status (running, exited, paused…) | Docker Events API  |
+| Logs                                        | Docker Logs stream |
+| CPU/Memory usage                            | Docker Stats API   |
+| Container ID, Name, Port                    | Docker Inspect     |
+
+end port – 65535

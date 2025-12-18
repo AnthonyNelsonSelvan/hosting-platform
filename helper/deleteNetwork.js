@@ -1,0 +1,1 @@
+//plan canceled project deletion should have network deletion cause project deletion is means delete everything
