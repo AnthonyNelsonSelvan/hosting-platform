@@ -2,7 +2,6 @@ import path from "path";
 import unZipFiles from "../utils/unzipper.js";
 import Folder from "../model/folder.js";
 import { buildImage } from "../services/dockerode.services.js";
-import docker from "../connection/docker.js";
 import hashDirectory from "../helper/hashFolder.js";
 import { ignore } from "../helper/ignore.js";
 import Image from "../model/image.js";
@@ -10,6 +9,7 @@ import deleteImage from "../helper/deleteImage.js";
 import { handleDeleteFolder } from "../helper/deleteFolder.js";
 import { createOrGetNetwork } from "../helper/createNetwork.js";
 import Project from "../model/project.js";
+import createContainer from "../helper/createContainer.js";
 
 const handleUploadAndBuildImage = async (req, res) => {
   {
@@ -73,45 +73,70 @@ const handleUploadAndBuildImage = async (req, res) => {
 
 const handleCreateContainer = async (req, res) => {
   try {
-    const { image } = req.body;
-    const exist = await Image.findOne({repoTag: image})
+    const { image, ports, volumes, aliases, containerName, netName } = req.body;
+    console.log(ports);
+    const exist = await Image.findOne({ repoTag: image });
     if (!exist) {
       return res
         .status(404)
         .json({ message: `There is no image named ${image}` });
     }
 
-    const container = await docker.createContainer({
-      Image: image,
-      AttachStderr: true,
-      AttachStdout: true,
-      AttachStdin: true,
-      ExposedPorts: {
-        "8000/tcp": {},
-      },
-      HostConfig: {
-        PortBindings: {
-          "8000/tcp": [
-            {
-              HostPort: "0", //Zero is used on purpose so docker can randomly get unused port
-            },
-          ],
-        },
-      }, // create network with aliases
-    });
-    await container.start();
-    const containerDetails = await container.inspect();
-    console.log(containerDetails.NetworkSettings.Ports["8000/tcp"][0].HostPort);
-    console.log(containerDetails.NetworkSettings.Ports["8000/tcp"][0].HostIp);
-    const logStream = await container.logs({
+    const net = await Project.findOne({ name: netName });
+
+    if (!net) {
+      return res
+        .status(404)
+        .json({ message: `No Network found named ${netName}` });
+    }
+
+    const baseUrl = path.normalize(net.folderPath);
+    const network = net.networkName;
+
+    const aboutContainer = await createContainer(
+      exist.repoTag,
+      ports,
+      volumes,
+      aliases,
+      network,
+      baseUrl,
+      containerName
+    );
+    console.log(aboutContainer.NetworkSettings.Ports["8000/tcp"][0].HostPort);
+    console.log(aboutContainer.NetworkSettings.Ports["8000/tcp"][0].HostIp);
+    const logStream = await aboutContainer.logs({
       follow: true,
       stdout: true,
       stderr: true,
     });
 
+    let errorCount = 0;
+    let maxErrorCount = 50;
+
+    const resetTimer = setInterval(() => {
+      errorCount = 0;
+    }, 6000000);
+
+    const errorLogStream = fs.createWriteStream(
+      path.join(baseUrl, "error_logs.txt"),
+      { flags: "a" }
+    );
+
     logStream.on("data", (chunk) => {
-      const logLine = chunk.toString("utf8");
+      const type = chunk[0];
+      if (type !== 2) return;
+
+      if (errorCount > maxErrorCount) return;
+
+      errorCount++;
+
+      const errorMsg = chunk.slice(8).toString("utf8");
+      errorLogStream.write(errorMsg);
       console.log(logLine); //TODO:Websocket
+    });
+
+    logStream.on('end', () => {
+      clearInterval(resetTimer);
     });
 
     res.status(201).json({ message: "Container created successfully" });

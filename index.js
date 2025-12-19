@@ -9,6 +9,7 @@ connectMongoose("mongodb://127.0.0.1:27017/hosting")
 const app = express();
 
 app.use(urlencoded({ extended: true }))
+app.use(express.json())
 
 app.use("/api/docker",dockerRouter);
 app.use("/api/uploads",folderRoutes);
