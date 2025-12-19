@@ -55,7 +55,7 @@ const createContainer = async (
     });
     await container.start();
     const containerDetails = await container.inspect();
-    return containerDetails;
+    return {containerDetails, container}
   } catch (error) {
     throw error;
   }

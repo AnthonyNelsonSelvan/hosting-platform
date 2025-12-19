@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+uploads
+
+
+
 # Logs
 logs/
 *.log

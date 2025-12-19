@@ -10,6 +10,8 @@ import { handleDeleteFolder } from "../helper/deleteFolder.js";
 import { createOrGetNetwork } from "../helper/createNetwork.js";
 import Project from "../model/project.js";
 import createContainer from "../helper/createContainer.js";
+import fs from "fs";
+import demuxChunk from "../helper/demux.js";
 
 const handleUploadAndBuildImage = async (req, res) => {
   {
@@ -93,7 +95,7 @@ const handleCreateContainer = async (req, res) => {
     const baseUrl = path.normalize(net.folderPath);
     const network = net.networkName;
 
-    const aboutContainer = await createContainer(
+    const { containerDetails, container } = await createContainer(
       exist.repoTag,
       ports,
       volumes,
@@ -102,11 +104,11 @@ const handleCreateContainer = async (req, res) => {
       baseUrl,
       containerName
     );
-    console.log(aboutContainer.NetworkSettings.Ports["8000/tcp"][0].HostPort);
-    console.log(aboutContainer.NetworkSettings.Ports["8000/tcp"][0].HostIp);
-    const logStream = await aboutContainer.logs({
+    console.log(containerDetails.NetworkSettings.Ports["8000/tcp"][0].HostPort);
+    console.log(containerDetails.NetworkSettings.Ports["8000/tcp"][0].HostIp);
+    const logStream = await container.logs({
       follow: true,
-      stdout: true,
+      stdout: false,
       stderr: true,
     });
 
@@ -115,7 +117,7 @@ const handleCreateContainer = async (req, res) => {
 
     const resetTimer = setInterval(() => {
       errorCount = 0;
-    }, 6000000);
+    }, 600000);
 
     const errorLogStream = fs.createWriteStream(
       path.join(baseUrl, "error_logs.txt"),
@@ -123,20 +125,20 @@ const handleCreateContainer = async (req, res) => {
     );
 
     logStream.on("data", (chunk) => {
-      const type = chunk[0];
-      if (type !== 2) return;
-
       if (errorCount > maxErrorCount) return;
 
-      errorCount++;
+      const cleanErrMsg = demuxChunk(chunk);
 
-      const errorMsg = chunk.slice(8).toString("utf8");
-      errorLogStream.write(errorMsg);
-      console.log(logLine); //TODO:Websocket
+      cleanErrMsg.forEach((err) => {
+        if (errorCount > maxErrorCount) return;
+        errorCount++;
+        errorLogStream.write(err);
+      });
     });
 
-    logStream.on('end', () => {
+    logStream.on("end", () => {
       clearInterval(resetTimer);
+      errorLogStream.end();
     });
 
     res.status(201).json({ message: "Container created successfully" });
