@@ -25,6 +25,6 @@ const ProjectSchema = new Schema(
   { timestamps: true }
 );
 
-const Project = model("project", ProjectSchema);
+const Project = model("Project", ProjectSchema);
 
 export default Project;

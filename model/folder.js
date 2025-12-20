@@ -23,6 +23,6 @@ const FolderSchema = new Schema({
     }
 },{timestamps : true})
 
-const Folder = model("folder",FolderSchema);
+const Folder = model("Folder",FolderSchema);
 
 export default Folder;

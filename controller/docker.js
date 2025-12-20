@@ -76,7 +76,15 @@ const handleUploadAndBuildImage = async (req, res) => {
 
 const handleCreateContainer = async (req, res) => {
   try {
-    const { image, ports, volumes, aliases, containerName, netName, containerType } = req.body;
+    const {
+      image,
+      ports,
+      volumes,
+      aliases,
+      containerName,
+      netName,
+      containerType,
+    } = req.body;
     const exist = await Image.findOne({ repoTag: image });
     if (!exist) {
       return res
@@ -95,6 +103,17 @@ const handleCreateContainer = async (req, res) => {
     const baseUrl = path.normalize(net.folderPath);
     const network = net.networkName;
 
+    const draftContainer = await Container.create({
+      name: containerName,
+      aliasesName: aliases,
+      type: containerType,
+      project: net._id,
+      image: exist._id,
+      envVariables: [], //make it dynamic later,
+      volumes: [], //make it dynamic later,
+      server: "Server A", //choose this from env later
+    });
+
     const { containerDetails, container, portDetails } = await createContainer(
       exist.repoTag,
       ports,
@@ -105,54 +124,9 @@ const handleCreateContainer = async (req, res) => {
       containerName
     );
 
-    await Container.create({
-      containerId: containerDetails.Id,
-      name: containerName,
-      aliasesName: aliases,
-      type: containerType, 
-      project: net._id,
-      image: exist._id,
-      ports: portDetails,
-      envVariables: [], //make it dynamic later,
-      volumes: [], //make it dynamic later,
-      server: "Server A", //choose this from env later
-      status: containerDetails.State.Status,
-    });
-
-    const logStream = await container.logs({
-      follow: true,
-      stdout: false,
-      stderr: true,
-    });
-
-    let errorCount = 0;
-    let maxErrorCount = 50;
-
-    const resetTimer = setInterval(() => {
-      errorCount = 0;
-    }, 600000);
-
-    const errorLogStream = fs.createWriteStream(
-      path.join(baseUrl, "error_logs.txt"),
-      { flags: "a" }
-    );
-
-    logStream.on("data", (chunk) => {
-      if (errorCount > maxErrorCount) return;
-
-      const cleanErrMsg = demuxChunk(chunk);
-
-      cleanErrMsg.forEach((err) => {
-        if (errorCount > maxErrorCount) return;
-        errorCount++;
-        errorLogStream.write(`${aliases} : ${err}`);
-      });
-    });
-
-    logStream.on("end", () => {
-      clearInterval(resetTimer);
-      errorLogStream.end();
-    });
+    draftContainer.containerId = containerDetails.Id,
+    draftContainer.ports = portDetails;
+    await draftContainer.save()
 
     res.status(201).json({ message: "Container created successfully" });
   } catch (error) {

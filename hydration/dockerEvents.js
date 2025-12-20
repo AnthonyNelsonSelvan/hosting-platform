@@ -1,5 +1,7 @@
 import docker from "../connection/docker.js";
 import Container from "../model/container.js";
+import attachLogs from "../utils/logManager.js";
+import path from "path";
 
 const listenToDockerEvents = async () => {
   try {
@@ -13,23 +15,28 @@ const listenToDockerEvents = async () => {
 
         if (event.Type !== "container") return;
 
-        const containerId = event.Actor.ID;
+        const containerName = event.Actor.Attributes.name;
 
         switch (event.Action) {
           case "die":
             await Container.findOneAndUpdate(
-              { containerId: containerId },
+              { name: containerName },
               { status: "stopped" }
             );
             break;
           case "start":
-            await Container.findOneAndUpdate(
-              { containerId: containerId },
-              { status: "running" }
-            );
+            const container = await Container.findOneAndUpdate(
+              { name: containerName },
+              { status: "running" },
+              { new: true }
+            ).populate("project");
+
+            const baseUrl = path.normalize(container.project.folderPath);
+
+            attachLogs(container.name, baseUrl, container.aliasesName);
             break;
           case "destroy":
-            await Container.findOneAndDelete({ containerId: containerId });
+            await Container.findOneAndDelete({ name: containerName });
             break;
         }
       } catch (error) {

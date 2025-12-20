@@ -1,26 +1,31 @@
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
 const ContainerSchema = new Schema({
   // --- Identity ---
-  containerId: { type: String, required: true, unique: true },
+  containerId: { type: String, unique: true,sparse: true },
   name: { type: String, required: true },
   aliasesName: { type: String, required: true, trim: true },
-  type: { type: String, enum: ["frontend", "backend", "database", "other"], required: true, default: "backend"},
+  type: {
+    type: String,
+    enum: ["frontend", "backend", "database", "other"],
+    required: true,
+    default: "backend",
+  },
 
   // --- Relationships ---
   project: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: "Project",
     required: true,
   },
   // user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  image: { type: Schema.Types.ObjectId, ref: "Image" },
+  image: { type: mongoose.Schema.Types.ObjectId, ref: "Image" },
 
   // --- Networking ---
   ports: [
     {
-      internal: { type: String, required: true }, // e.g., 3000
-      external: { type: String, required: true }, // e.g., 14005
+      internal: { type: String, required: true, default: "pending" }, // e.g., 3000
+      external: { type: String, required: true, default: "pending" }, // e.g., 14005
       protocol: { type: String, default: "tcp" }, // tcp or udp
     },
   ],
@@ -41,15 +46,15 @@ const ContainerSchema = new Schema({
   },
 
   //says on which server the container is running if failed
-  server: { 
+  server: {
     type: String,
     required: true,
   },
 
-  status: { type: String, default: "running" },
+  status: { type: String, default: "pending" },
   createdAt: { type: Date, default: Date.now },
 });
 
-const Container = model("container", ContainerSchema);
+const Container = model("Container", ContainerSchema);
 
 export default Container;
