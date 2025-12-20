@@ -55,7 +55,19 @@ const createContainer = async (
     });
     await container.start();
     const containerDetails = await container.inspect();
-    return {containerDetails, container}
+    
+    const portDetails = []; // getting needed port details to save in db
+
+    ports.forEach((port) => {
+      let hostPort = containerDetails.NetworkSettings.Ports[`${port.port}/${port.protocol}`][0].HostPort;
+      let toPush = {
+        internal: port.port,
+        external: hostPort,
+        protocol: port.protocol,
+      };
+      portDetails.push(toPush);
+    });
+    return { containerDetails, container, portDetails };
   } catch (error) {
     throw error;
   }

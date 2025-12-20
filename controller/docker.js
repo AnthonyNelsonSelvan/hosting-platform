@@ -12,6 +12,7 @@ import Project from "../model/project.js";
 import createContainer from "../helper/createContainer.js";
 import fs from "fs";
 import demuxChunk from "../helper/demux.js";
+import Container from "../model/container.js";
 
 const handleUploadAndBuildImage = async (req, res) => {
   {
@@ -75,8 +76,7 @@ const handleUploadAndBuildImage = async (req, res) => {
 
 const handleCreateContainer = async (req, res) => {
   try {
-    const { image, ports, volumes, aliases, containerName, netName } = req.body;
-    console.log(ports);
+    const { image, ports, volumes, aliases, containerName, netName, containerType } = req.body;
     const exist = await Image.findOne({ repoTag: image });
     if (!exist) {
       return res
@@ -95,7 +95,7 @@ const handleCreateContainer = async (req, res) => {
     const baseUrl = path.normalize(net.folderPath);
     const network = net.networkName;
 
-    const { containerDetails, container } = await createContainer(
+    const { containerDetails, container, portDetails } = await createContainer(
       exist.repoTag,
       ports,
       volumes,
@@ -104,8 +104,20 @@ const handleCreateContainer = async (req, res) => {
       baseUrl,
       containerName
     );
-    console.log(containerDetails.NetworkSettings.Ports["8000/tcp"][0].HostPort);
-    console.log(containerDetails.NetworkSettings.Ports["8000/tcp"][0].HostIp);
+
+    await Container.create({
+      containerId: containerDetails.Id,
+      name: containerName,
+      aliasesName: aliases,
+      type: containerType, 
+      project: net._id,
+      image: exist._id,
+      ports: portDetails,
+      envVariables: [], //make it dynamic later,
+      volumes: [], //make it dynamic later,
+      status: containerDetails.State.Status,
+    });
+
     const logStream = await container.logs({
       follow: true,
       stdout: false,

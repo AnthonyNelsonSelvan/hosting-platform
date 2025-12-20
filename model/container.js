@@ -9,18 +9,18 @@ const ContainerSchema = new Schema({
 
   // --- Relationships ---
   project: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: "Project",
     required: true,
   },
   // user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  image: { type: mongoose.Schema.Types.ObjectId, ref: "Image" },
+  image: { type: Schema.Types.ObjectId, ref: "Image" },
 
   // --- Networking ---
   ports: [
     {
-      internal: { type: Number, required: true }, // e.g., 3000
-      external: { type: Number, required: true }, // e.g., 14005
+      internal: { type: String, required: true }, // e.g., 3000
+      external: { type: String, required: true }, // e.g., 14005
       protocol: { type: String, default: "tcp" }, // tcp or udp
     },
   ],
