@@ -115,6 +115,7 @@ const handleCreateContainer = async (req, res) => {
       ports: portDetails,
       envVariables: [], //make it dynamic later,
       volumes: [], //make it dynamic later,
+      server: "Server A", //choose this from env later
       status: containerDetails.State.Status,
     });
 
@@ -144,7 +145,7 @@ const handleCreateContainer = async (req, res) => {
       cleanErrMsg.forEach((err) => {
         if (errorCount > maxErrorCount) return;
         errorCount++;
-        errorLogStream.write(err);
+        errorLogStream.write(`${aliases} : ${err}`);
       });
     });
 

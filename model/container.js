@@ -40,6 +40,12 @@ const ContainerSchema = new Schema({
     default: "on-failure",
   },
 
+  //says on which server the container is running if failed
+  server: { 
+    type: String,
+    required: true,
+  },
+
   status: { type: String, default: "running" },
   createdAt: { type: Date, default: Date.now },
 });
