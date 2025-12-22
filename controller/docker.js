@@ -74,6 +74,7 @@ const handleUploadAndBuildImage = async (req, res) => {
 };
 
 const handleCreateContainer = async (req, res) => {
+  let draftContainer = null;
   try {
     const {
       image,
@@ -83,7 +84,17 @@ const handleCreateContainer = async (req, res) => {
       containerName,
       netName,
       containerType,
+      envVariables,
     } = req.body;
+
+    const validContainer = await Container.findOne({ name: containerName });
+
+    if (validContainer) {
+      return res
+        .status(400)
+        .json({ message: "Container name is taken try another" });
+    }
+
     const exist = await Image.findOne({ repoTag: image });
     if (!exist) {
       return res
@@ -96,20 +107,20 @@ const handleCreateContainer = async (req, res) => {
     if (!net) {
       return res
         .status(404)
-        .json({ message: `No Network found named ${netName}` });
+        .json({ message: `Something Went Wrong, please refresh and check.` });
     }
 
     const baseUrl = path.normalize(net.folderPath);
     const network = net.networkName;
 
-    const draftContainer = await Container.create({
+    draftContainer = await Container.create({
       name: containerName,
       aliasesName: aliases,
       type: containerType,
       project: net._id,
       image: exist._id,
-      envVariables: [], //make it dynamic later,
-      volumes: [], //make it dynamic later,
+      envVariables: envVariables || [], //make it dynamic later,
+      volumes: volumes || [], //make it dynamic later,
       server: "Server A", //choose this from env later
     });
 
@@ -120,7 +131,8 @@ const handleCreateContainer = async (req, res) => {
       aliases,
       network,
       baseUrl,
-      containerName
+      containerName,
+      envVariables
     );
 
     (draftContainer.containerId = containerDetails.Id),
@@ -129,6 +141,9 @@ const handleCreateContainer = async (req, res) => {
 
     res.status(201).json({ message: "Container created successfully" });
   } catch (error) {
+    if (draftContainer) {
+      await Container.findByIdAndDelete(draftContainer._id);
+    }
     console.log("Error creating container", error);
     res.status(500).json({ message: "Somethig went Wrong." });
   }
@@ -154,9 +169,14 @@ async function handleDockerOperations(req, res) {
     const response = await dockerOperation(id, operation);
     return res.status(response.status).json(response.message);
   } catch (error) {
-    console.error("Error in Docker Operations: ",error);
-    return res.status(500).json({message: "Unexpected Error Happened."});
+    console.error("Error in Docker Operations: ", error);
+    return res.status(500).json({ message: "Unexpected Error Happened." });
   }
 }
 
-export { handleUploadAndBuildImage, handleCreateContainer, handleDeleteImage, handleDockerOperations };
+export {
+  handleUploadAndBuildImage,
+  handleCreateContainer,
+  handleDeleteImage,
+  handleDockerOperations,
+};

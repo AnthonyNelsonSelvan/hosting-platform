@@ -1,4 +1,6 @@
 import docker from "../connection/docker.js";
+import path from "path";
+import fs from "fs";
 
 const createContainer = async (
   image,
@@ -7,11 +9,13 @@ const createContainer = async (
   aliases,
   network,
   baseUrl,
-  containerName
+  containerName,
+  envVariables
 ) => {
   const exposedPorts = {};
   const portBindings = {};
   const containerVolumes = [];
+  const declaredVolumes = {};
   const containerNetwork = {};
 
   ports.forEach((p) => {
@@ -23,9 +27,12 @@ const createContainer = async (
 
   if (volumes) {
     volumes.forEach((vol) => {
-      containerVolumes.push(
-        `${baseUrl}/${safeImageName}/${vol.name}:${vol.volume}`
-      );
+      const hostPath = path.join(baseUrl, safeImageName, vol.name);
+      if (!fs.existsSync(hostPath)) {
+        fs.mkdirSync(hostPath, { recursive: true });
+      }
+      containerVolumes.push(`${hostPath}:${vol.volume}`);
+      declaredVolumes[vol.volume] = {};
     });
   }
 
@@ -35,6 +42,8 @@ const createContainer = async (
     const container = await docker.createContainer({
       Image: image,
       name: containerName,
+      Env: envVariables || [],
+      Volumes: declaredVolumes,
       AttachStderr: true,
       AttachStdin: true,
       AttachStdout: true,
@@ -55,11 +64,14 @@ const createContainer = async (
     });
     await container.start();
     const containerDetails = await container.inspect();
-    
+
     const portDetails = []; // getting needed port details to save in db
 
     ports.forEach((port) => {
-      let hostPort = containerDetails.NetworkSettings.Ports[`${port.port}/${port.protocol}`][0].HostPort;
+      let hostPort =
+        containerDetails.NetworkSettings.Ports[
+          `${port.port}/${port.protocol}`
+        ][0].HostPort;
       let toPush = {
         internal: port.port,
         external: hostPort,
