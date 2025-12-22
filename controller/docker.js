@@ -10,9 +10,8 @@ import { handleDeleteFolder } from "../helper/deleteFolder.js";
 import { createOrGetNetwork } from "../helper/createNetwork.js";
 import Project from "../model/project.js";
 import createContainer from "../helper/createContainer.js";
-import fs from "fs";
-import demuxChunk from "../helper/demux.js";
 import Container from "../model/container.js";
+import dockerOperation from "../helper/dockerOperation.js";
 
 const handleUploadAndBuildImage = async (req, res) => {
   {
@@ -114,7 +113,7 @@ const handleCreateContainer = async (req, res) => {
       server: "Server A", //choose this from env later
     });
 
-    const { containerDetails, container, portDetails } = await createContainer(
+    const { containerDetails, portDetails } = await createContainer(
       exist.repoTag,
       ports,
       volumes,
@@ -124,9 +123,9 @@ const handleCreateContainer = async (req, res) => {
       containerName
     );
 
-    draftContainer.containerId = containerDetails.Id,
-    draftContainer.ports = portDetails;
-    await draftContainer.save()
+    (draftContainer.containerId = containerDetails.Id),
+      (draftContainer.ports = portDetails);
+    await draftContainer.save();
 
     res.status(201).json({ message: "Container created successfully" });
   } catch (error) {
@@ -149,4 +148,15 @@ async function handleDeleteImage(req, res) {
   }
 }
 
-export { handleUploadAndBuildImage, handleCreateContainer, handleDeleteImage };
+async function handleDockerOperations(req, res) {
+  try {
+    const { operation, id } = req.params;
+    const response = await dockerOperation(id, operation);
+    return res.status(response.status).json(response.message);
+  } catch (error) {
+    console.error("Error in Docker Operations: ",error);
+    return res.status(500).json({message: "Unexpected Error Happened."});
+  }
+}
+
+export { handleUploadAndBuildImage, handleCreateContainer, handleDeleteImage, handleDockerOperations };
