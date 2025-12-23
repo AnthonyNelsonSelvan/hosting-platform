@@ -1,6 +1,7 @@
+import 'dotenv/config'
 import express, { urlencoded } from "express";
-import connectMongoose from "./connection/mongo.js";
 
+import connectMongoose from "./connection/mongo.js";
 import dockerRouter from "./routes/docker.js";
 import folderRoutes from "./routes/folder.js";
 import listenToDockerEvents from "./hydration/dockerEvents.js";

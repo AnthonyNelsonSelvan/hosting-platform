@@ -25,8 +25,8 @@ const ContainerSchema = new Schema(
         protocol: { type: String, default: "tcp" },
       },
     ],
-    envVariables: [{ key: { type: String }, value: { type: String } }],
-    volumes: [{ hostPath: String, containerPath: String }],
+    envVariables: [{ key: String, value: String }],
+    volumes: [{ name: String, volume: String }],
     memoryLimit: {
       type: Number,
       default: 512 * 1024 * 1024, // 512MB

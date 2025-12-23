@@ -9,6 +9,7 @@ const createContainer = async (
   aliases,
   network,
   baseUrl,
+  internalUrl,
   containerName,
   envVariables
 ) => {
@@ -28,8 +29,9 @@ const createContainer = async (
   if (volumes) {
     volumes.forEach((vol) => {
       const hostPath = path.join(baseUrl, safeImageName, vol.name);
-      if (!fs.existsSync(hostPath)) {
-        fs.mkdirSync(hostPath, { recursive: true });
+      const internalPath = path.join(internalUrl, safeImageName, vol.name);
+      if (!fs.existsSync(internalPath)) {
+        fs.mkdirSync(internalPath, { recursive: true });
       }
       containerVolumes.push(`${hostPath}:${vol.volume}`);
       declaredVolumes[vol.volume] = {};

@@ -37,8 +37,8 @@ const startListeningToLogs = async () => {
           await container.save();
           continue;
         }
-        const baseUrl = container.project.folderPath;
-        attachLogs(container.name, baseUrl, container.aliasesName); //fire and forget
+        const internalPath = container.project.internalPath;
+        attachLogs(container.name, internalPath, container.aliasesName); //fire and forget
       } catch (error) {
         console.error(`Error syncing ${container.name}:`, error);
       }

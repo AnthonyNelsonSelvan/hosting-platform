@@ -5,7 +5,7 @@ import fs from "fs";
 
 const activeLoggers = new Set(); //idempotency
 
-const attachLogs = async (containerName, baseUrl, aliases) => {
+const attachLogs = async (containerName, internalPath, aliases) => {
   let container;
   try {
     if (activeLoggers.has(containerName)) {
@@ -30,7 +30,7 @@ const attachLogs = async (containerName, baseUrl, aliases) => {
     }, 600000);
 
     const errorLogStream = fs.createWriteStream(
-      path.join(baseUrl, "error_logs.txt"),
+      path.join(internalPath, `${containerName}_error_logs.txt`),
       { flags: "a" }
     );
 

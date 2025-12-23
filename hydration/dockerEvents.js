@@ -31,9 +31,9 @@ const listenToDockerEvents = async () => {
               { new: true }
             ).populate("project");
 
-            const baseUrl = path.normalize(container.project.folderPath);
+            const internalPath = path.normalize(container.project.internalPath);
 
-            attachLogs(container.name, baseUrl, container.aliasesName);
+            attachLogs(container.name, internalPath, container.aliasesName);
             break;
           case "destroy":
             await Container.findOneAndDelete({ name: containerName });

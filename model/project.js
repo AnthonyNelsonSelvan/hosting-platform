@@ -13,8 +13,16 @@ const ProjectSchema = new Schema(
     },
     folderPath: {
       type: String,
-      required: true,
       unique: true, //for volumes 
+    },
+    dbType: {
+      type: String,
+      required: true,
+      enum: ["internal","external","none"],
+    },
+    internalPath: {
+      type: String,
+      unique: true
     }
     // userId: {
     //     type: mongoose.Schema.Types.ObjectId,

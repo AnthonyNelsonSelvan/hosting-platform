@@ -14,6 +14,7 @@ import Container from "../model/container.js";
 import dockerOperation from "../helper/dockerOperation.js";
 
 const handleUploadAndBuildImage = async (req, res) => {
+  const { project, user, imageName, folder: finalFolderName } = req.params;
   {
     if (!req.file) {
       return res
@@ -22,8 +23,6 @@ const handleUploadAndBuildImage = async (req, res) => {
     }
     const filePath = path.dirname(req.file.path);
     const zipFileName = req.file.filename;
-    const finalFolderName = req.params.folder;
-    const { project, user, imageName } = req.params;
     try {
       console.log(filePath);
       await unZipFiles(filePath, zipFileName, finalFolderName);
@@ -36,9 +35,7 @@ const handleUploadAndBuildImage = async (req, res) => {
       });
 
       const finalFilePath = path.join(filePath, finalFolderName);
-
       const folderHash = hashDirectory(finalFilePath, ignore);
-
       const isDuplicate = await Image.findOne({ folderHash: folderHash });
 
       if (isDuplicate) {
@@ -48,12 +45,14 @@ const handleUploadAndBuildImage = async (req, res) => {
         });
       }
 
-      const isProjectThere = await Project.findOne({ folderPath: filePath });
+      const isProjectThere = await Project.findOne({ name: project });
 
       if (!isProjectThere) {
         const projectDB = new Project({
           name: project,
-          folderPath: filePath,
+          dbType: "none",
+          folderPath: path.join(process.env.HOST_UPLOAD_ROOT,user,project),
+          internalPath: filePath,
         });
 
         const networkName = `host_net_${projectDB._id}`;
@@ -64,7 +63,9 @@ const handleUploadAndBuildImage = async (req, res) => {
         await projectDB.save();
       }
 
-      buildImage(finalFilePath, folder._id, imageName, folderHash);
+      const hostPath = path.join(process.env.HOST_UPLOAD_ROOT,user,project,finalFolderName);
+
+      buildImage(hostPath, folder._id, imageName, folderHash);
       res.status(201).send("File uploaded & extracted Successfully!");
     } catch (err) {
       console.log("Unzip failed", err);
@@ -111,6 +112,7 @@ const handleCreateContainer = async (req, res) => {
     }
 
     const baseUrl = path.normalize(net.folderPath);
+    const internalUrl = path.normalize(net.internalPath);
     const network = net.networkName;
 
     draftContainer = await Container.create({
@@ -119,8 +121,8 @@ const handleCreateContainer = async (req, res) => {
       type: containerType,
       project: net._id,
       image: exist._id,
-      envVariables: envVariables || [], //make it dynamic later,
-      volumes: volumes || [], //make it dynamic later,
+      envVariables: envVariables || [], 
+      volumes: volumes || [],
       server: "Server A", //choose this from env later
     });
 
@@ -131,6 +133,7 @@ const handleCreateContainer = async (req, res) => {
       aliases,
       network,
       baseUrl,
+      internalUrl,
       containerName,
       envVariables
     );
