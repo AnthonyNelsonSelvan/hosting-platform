@@ -51,7 +51,7 @@ const handleUploadAndBuildImage = async (req, res) => {
         const projectDB = new Project({
           name: project,
           dbType: "none",
-          folderPath: path.join(process.env.HOST_UPLOAD_ROOT,user,project),
+          folderPath: path.join(process.env.HOST_UPLOAD_ROOT, user, project),
           internalPath: filePath,
         });
 
@@ -63,7 +63,12 @@ const handleUploadAndBuildImage = async (req, res) => {
         await projectDB.save();
       }
 
-      const hostPath = path.join(process.env.HOST_UPLOAD_ROOT,user,project,finalFolderName);
+      const hostPath = path.join(
+        process.env.HOST_UPLOAD_ROOT,
+        user,
+        project,
+        finalFolderName
+      );
 
       buildImage(hostPath, folder._id, imageName, folderHash);
       res.status(201).send("File uploaded & extracted Successfully!");
@@ -86,6 +91,7 @@ const handleCreateContainer = async (req, res) => {
       netName,
       containerType,
       envVariables,
+      useInternalDB,
     } = req.body;
 
     const validContainer = await Container.findOne({ name: containerName });
@@ -111,6 +117,21 @@ const handleCreateContainer = async (req, res) => {
         .json({ message: `Something Went Wrong, please refresh and check.` });
     }
 
+    if (useInternalDB) {
+      let data;
+      try {
+        data = await Project.findById({ _id: net._id }).select(
+          "+dbContainer.networkUrl"
+        );
+        if (!data || !data.dbContainer) {
+          return res.status(404).json({ message: "This project has no DB" });
+        }
+      } catch (error) {
+        return res.status(500).json({ message: "Unexpected error" });
+      }
+      envVariables.push(`DATABASE_URL=${data.dbContainer.networkUrl}?authSource=admin`);
+    }
+
     const baseUrl = path.normalize(net.folderPath);
     const internalUrl = path.normalize(net.internalPath);
     const network = net.networkName;
@@ -121,7 +142,7 @@ const handleCreateContainer = async (req, res) => {
       type: containerType,
       project: net._id,
       image: exist._id,
-      envVariables: envVariables || [], 
+      envVariables: envVariables || [],
       volumes: volumes || [],
       server: "Server A", //choose this from env later
     });

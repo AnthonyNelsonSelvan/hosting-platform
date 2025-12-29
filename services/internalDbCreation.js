@@ -1,15 +1,15 @@
-import createContainer from "../helper/createContainer";
+import createDbContainer from "../helper/createDbContainer.js";
 
-const createInternalDBForProject = (
+const createInternalDBForProject = async (
   version,
   dbName,
   dbType,
   user,
   password,
-  hostDbPath,
+  project,
   networkName
 ) => {
-  let image, envVars, containerVolPath;
+  let image, envVars, containerVolPath, volume, ports;
   switch (dbType) {
     case "postgres":
       image = `postgres:${version}`;
@@ -19,10 +19,10 @@ const createInternalDBForProject = (
         `POSTGRES_PASSWORD=${password}`,
         `POSTGRES_DB=${dbName}`,
       ];
-    //   const volumes = [hostPath: ]
+      volume = { name: project, volume: containerVolPath };
       ports = [
         {
-          port: 3306,
+          port: 5432,
           protocol: "tcp",
         },
       ];
@@ -37,9 +37,10 @@ const createInternalDBForProject = (
         `MYSQL_DATABASE=${dbName}`,
         `MYSQL_ROOT_PASSWORD=${password}`,
       ];
+      volume = { name: project, volume: containerVolPath };
       ports = [
         {
-          port: 5432,
+          port: 3306,
           protocol: "tcp",
         },
       ];
@@ -52,6 +53,7 @@ const createInternalDBForProject = (
         `MONGO_INITDB_ROOT_USERNAME=${user}`,
         `MONGO_INITDB_ROOT_PASSWORD=${password}`,
       ];
+      volume = { name: project, volume: containerVolPath };
       ports = [
         {
           port: 27017,
@@ -63,6 +65,16 @@ const createInternalDBForProject = (
     default:
       throw new Error(`Unsupported Database Type: ${dbType}`);
   }
-
-  createContainer(image,ports,);
+  const { containerDetails, hostPath } = await createDbContainer(
+    image,
+    ports,
+    volume,
+    networkName,
+    envVars,
+    project
+  );
+  const key = `${ports[0].port}/${ports[0].protocol}`;
+  return { containerDetails, hostPath, key };
 };
+
+export default createInternalDBForProject;

@@ -8,7 +8,7 @@ const createContainer = async (
   volumes,
   aliases,
   network,
-  baseUrl,
+  baseUrl, //hostPath
   internalUrl,
   containerName,
   envVariables
@@ -30,7 +30,7 @@ const createContainer = async (
     volumes.forEach((vol) => {
       const hostPath = path.join(baseUrl, safeImageName, vol.name);
       const internalPath = path.join(internalUrl, safeImageName, vol.name);
-      if (!fs.existsSync(internalPath)) {
+      if (!fs.existsSync(internalPath)) { //making a folder within the volumed folder of the container
         fs.mkdirSync(internalPath, { recursive: true });
       }
       containerVolumes.push(`${hostPath}:${vol.volume}`);
@@ -81,7 +81,7 @@ const createContainer = async (
       };
       portDetails.push(toPush);
     });
-    return { containerDetails, container, portDetails };
+    return { containerDetails, portDetails };
   } catch (error) {
     throw error;
   }

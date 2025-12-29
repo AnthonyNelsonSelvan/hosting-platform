@@ -1,9 +1,12 @@
-import 'dotenv/config'
+import "dotenv/config";
 import express, { urlencoded } from "express";
 
 import connectMongoose from "./connection/mongo.js";
+
 import dockerRouter from "./routes/docker.js";
 import folderRoutes from "./routes/folder.js";
+import projectRoutes from "./routes/project.js";
+
 import listenToDockerEvents from "./hydration/dockerEvents.js";
 import startListeningToLogs from "./hydration/hydrateErrLogStream.js";
 
@@ -16,6 +19,7 @@ app.use(express.json());
 
 app.use("/api/docker", dockerRouter);
 app.use("/api/uploads", folderRoutes);
+app.use("/api/project", projectRoutes);
 
 app.listen(3000, async () => {
   console.log("server started at port 3000");

@@ -1,5 +1,6 @@
 import docker from "../connection/docker.js";
 import Container from "../model/container.js";
+import Project from "../model/project.js";
 import attachLogs from "../utils/logManager.js";
 import path from "path";
 
@@ -15,25 +16,55 @@ const listenToDockerEvents = async () => {
 
         if (event.Type !== "container") return;
 
-        const containerName = event.Actor.Attributes.name;
+        const rawName = event.Actor.Attributes.name;
+
+        const containerName = rawName.startsWith("/")
+          ? rawName.substring(1)
+          : rawName;
 
         switch (event.Action) {
           case "die":
-            await Container.findOneAndUpdate(
+            const inContainer = await Container.findOneAndUpdate(
               { name: containerName },
               { status: "stopped" }
             );
+            if (!inContainer) {
+              await Project.findOneAndUpdate(
+                {
+                  "dbContainer.containerName": containerName,
+                },
+                {
+                  $set: { "dbContainer.status": "stopped" },
+                }
+              );
+            }
             break;
           case "start":
-            const container = await Container.findOneAndUpdate(
+            let appStarted = await Container.findOneAndUpdate(
               { name: containerName },
               { status: "running" },
               { new: true }
-            ).populate("project");
+            );
 
-            const internalPath = path.normalize(container.project.internalPath);
+            if (appStarted) {
+              await appStarted.populate("project");
 
-            attachLogs(container.name, internalPath, container.aliasesName);
+              if (appStarted.project) {
+                const internalPath = path.normalize(
+                  appStarted.project.internalPath
+                );
+                attachLogs(
+                  appStarted.name,
+                  internalPath,
+                  appStarted.aliasesName
+                );
+              }
+            } else {
+              await Project.findOneAndUpdate(
+                { "dbContainer.containerName": containerName },
+                { $set: { "dbContainer.status": "running" } }
+              );
+            }
             break;
           case "destroy":
             await Container.findOneAndDelete({ name: containerName });

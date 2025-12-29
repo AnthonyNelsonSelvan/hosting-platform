@@ -5,7 +5,7 @@ import path from "path";
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const { user, project } = req.params;
-        const uploadPath = path.join(process.cwd(), "uploads", user, project);
+        const uploadPath = path.join(process.cwd(), "uploads", user, project);// req.user
 
 
         if (!fs.existsSync(uploadPath)) {

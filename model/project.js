@@ -13,22 +13,54 @@ const ProjectSchema = new Schema(
     },
     folderPath: {
       type: String,
-      unique: true, //for volumes 
+      unique: true, //for volumes
     },
-    dbType: {
+    dbMode: {
       type: String,
       required: true,
-      enum: ["internal","external","none"],
+      enum: ["internal", "external", "none"],
     },
     internalPath: {
       type: String,
-      unique: true
-    }
+      unique: true,
+    },
     // userId: {
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'User',
     //     required: true
     // }
+    dbContainer: {
+      containerName: {
+        type: String,
+      },
+      containerId: {
+        type: String,
+      },
+      engine: {
+        type: String,
+        enum: ["mongo", "postgres", "mysql"],
+      },
+      username: {
+        type: String,
+      },
+      password: {
+        type: String,
+        select: false,
+      },
+      volumePathHost: {
+        type: String,
+      },
+      portOnHost: {
+        type: String,
+      },
+      status: {
+        type: String,
+      },
+      networkUrl: {
+        type: String,
+        select: false
+      }
+    },
   },
   { timestamps: true }
 );
