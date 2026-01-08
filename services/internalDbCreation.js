@@ -65,7 +65,7 @@ const createInternalDBForProject = async (
     default:
       throw new Error(`Unsupported Database Type: ${dbType}`);
   }
-  const { containerDetails, hostPath } = await createDbContainer(
+  const { containerDetails, hostPath, internalPathForDb } = await createDbContainer(
     image,
     ports,
     volume,
@@ -74,7 +74,7 @@ const createInternalDBForProject = async (
     project
   );
   const key = `${ports[0].port}/${ports[0].protocol}`;
-  return { containerDetails, hostPath, key };
+  return { containerDetails, hostPath, key, internalPathForDb };
 };
 
 export default createInternalDBForProject;

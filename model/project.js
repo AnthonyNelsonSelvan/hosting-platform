@@ -59,6 +59,9 @@ const ProjectSchema = new Schema(
       networkUrl: {
         type: String,
         select: false
+      },
+      internalPath: {
+        type: String,
       }
     },
   },

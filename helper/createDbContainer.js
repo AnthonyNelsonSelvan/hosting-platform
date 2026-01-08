@@ -1,6 +1,6 @@
 import docker from "../connection/docker.js";
 import path from "path";
-import fs from "fs";     
+import fs from "fs";
 
 const createDbContainer = async (
   image,
@@ -24,6 +24,7 @@ const createDbContainer = async (
 
   const hostPath = path.join(baseUrl, project, volume.name);
   const internalPath = path.join(process.cwd(), "dbs", project, volume.name);
+  const internalPathForDb = path.join(process.cwd(), "dbs", project);
   if (!fs.existsSync(internalPath)) {
     //making a folder within the volumed folder of the container
     fs.mkdirSync(internalPath, { recursive: true });
@@ -57,9 +58,12 @@ const createDbContainer = async (
     });
     await container.start();
     const containerDetails = await container.inspect();
-    return {containerDetails,hostPath}
+    return { containerDetails, hostPath, internalPathForDb };
   } catch (error) {
-    console.error("Error Creating a project with a Database Container: ", error)
+    console.error(
+      "Error Creating a project with a Database Container: ",
+      error
+    );
     throw error;
   }
 };

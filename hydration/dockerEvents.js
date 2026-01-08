@@ -67,7 +67,14 @@ const listenToDockerEvents = async () => {
             }
             break;
           case "destroy":
-            await Container.findOneAndDelete({ name: containerName });
+            const deleted = await Container.findOneAndDelete({
+              name: containerName,
+            });
+            if (!deleted) {
+              await Project.findOneAndDelete({
+                "dbContainer.containerName": containerName,
+              });
+            }
             break;
         }
       } catch (error) {

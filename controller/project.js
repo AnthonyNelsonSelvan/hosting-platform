@@ -2,6 +2,8 @@ import Project from "../model/project.js";
 import path from "path";
 import createInternalDBForProject from "../services/internalDbCreation.js";
 import { createOrGetNetwork } from "../helper/createNetwork.js";
+import docker from "../connection/docker.js";
+import fs from "fs/promises";
 
 const handleCreateProject = async (req, res) => {
   const {
@@ -35,7 +37,7 @@ const handleCreateProject = async (req, res) => {
     await projectDB.save();
 
     if (internalOrExternalDB === "internal") {
-      const { containerDetails, hostPath, key } =
+      const { containerDetails, hostPath, key, internalPathForDb } =
         await createInternalDBForProject(
           version,
           dbName,
@@ -64,6 +66,7 @@ const handleCreateProject = async (req, res) => {
         volumePathHost: hostPath,
         portOnHost: containerDetails.NetworkSettings.Ports[key][0].HostPort,
         networkUrl: connectionString,
+        internalPath: internalPathForDb,
       };
       await projectDB.save();
     }
@@ -78,4 +81,35 @@ const handleCreateProject = async (req, res) => {
   }
 };
 
-export { handleCreateProject };
+const handleDeleteProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        message: "There is no such project please refresh and try again.",
+      });
+    }
+    const containerId = project?.dbContainer?.containerId;
+    if (containerId) {
+      const dbContainer = docker.getContainer(containerId);
+      const info = await dbContainer.inspect();
+      if (info.State.Running) {
+        await dbContainer.stop();
+      }
+      await dbContainer.remove();
+      await fs.rm(path.normalize(project.dbContainer.internalPath), {
+        recursive: true,
+        force: true,
+      });
+    } else {
+      await project.deleteOne();
+    }
+    res.status(200).json({ message: "Deleted the Project successfully." });
+  } catch (error) {
+    console.log("Error deleting project: ", error);
+    res.status(500).json("Unexpected Error Happened");
+  }
+};
+
+export { handleCreateProject, handleDeleteProject };
