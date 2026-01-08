@@ -4,6 +4,7 @@ import createInternalDBForProject from "../services/internalDbCreation.js";
 import { createOrGetNetwork } from "../helper/createNetwork.js";
 import docker from "../connection/docker.js";
 import fs from "fs/promises";
+import Container from "../model/container.js";
 
 const handleCreateProject = async (req, res) => {
   const {
@@ -84,6 +85,12 @@ const handleCreateProject = async (req, res) => {
 const handleDeleteProject = async (req, res) => {
   try {
     const { projectId } = req.params;
+    const isContainerInside = await Container.findOne({ project: projectId });
+    if (isContainerInside) {
+      return res.status(400).json({
+        message: "Clear every container inside project to delete the project.",
+      });
+    }
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({
@@ -92,19 +99,25 @@ const handleDeleteProject = async (req, res) => {
     }
     const containerId = project?.dbContainer?.containerId;
     if (containerId) {
-      const dbContainer = docker.getContainer(containerId);
-      const info = await dbContainer.inspect();
-      if (info.State.Running) {
-        await dbContainer.stop();
+      try {
+        const dbContainer = docker.getContainer(containerId);
+        const info = await dbContainer.inspect();
+
+        if (info.State.Running) {
+          await dbContainer.stop();
+        }
+
+        await dbContainer.remove();
+      } catch (err) {
+        console.log("Container already removed or not found");
       }
-      await dbContainer.remove();
+
       await fs.rm(path.normalize(project.dbContainer.internalPath), {
         recursive: true,
         force: true,
       });
-    } else {
-      await project.deleteOne();
     }
+    await project.deleteOne();
     res.status(200).json({ message: "Deleted the Project successfully." });
   } catch (error) {
     console.log("Error deleting project: ", error);
