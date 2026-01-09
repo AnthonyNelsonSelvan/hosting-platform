@@ -32,7 +32,15 @@ const ImageSchema = new Schema({
     type: String,
     required: true,
     unique: true,
+  },name: {
+    type: String,
+    required: true
   },
+  version: {
+    type: Number,
+    required: true,
+    default: 1,
+  }
 //   owner: {                // Owner of the image (user ID)
 //     type: mongoose.Schema.Types.ObjectId,
 //     ref: "User",

@@ -1,9 +1,16 @@
 import docker from "../connection/docker.js";
 import Container from "../model/container.js";
+import Project from "../model/project.js";
+import fs from "fs/promises";
+import path from "path";
 
 const dockerOperation = async (id, operation) => {
   try {
+    let project;
     const doc = await Container.findOne({ containerId: id });
+    if(operation === "delete"){
+      project = await Project.findById(doc.project);
+    }
     if (!doc) {
       return {
         status: 404,
@@ -36,6 +43,7 @@ const dockerOperation = async (id, operation) => {
           await container.stop();
         }
         await container.remove();
+        await fs.unlink(path.join(project.internalPath,`${doc.name}_error_logs.txt`));
         break;
     }
     return { status: 200, message: `Container ${operation}ed sucessfully.` };

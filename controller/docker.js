@@ -70,7 +70,9 @@ const handleUploadAndBuildImage = async (req, res) => {
         finalFolderName
       );
 
-      buildImage(hostPath, folder._id, imageName, folderHash);
+      const baseName = req.baseName;
+
+      buildImage(hostPath, folder._id, imageName, folderHash, baseName);
       res.status(201).send("File uploaded & extracted Successfully!");
     } catch (err) {
       console.log("Unzip failed", err);

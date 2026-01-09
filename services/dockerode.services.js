@@ -16,11 +16,15 @@ const buildImageStream = (tarStream, imageName) => {
         if (event.error) console.error("Docker error:", event.error);
       };
 
-      docker.modem.followProgress(stream, (err, output) => {
-        clearTimeout(buildTimeout);
-        if (err) return reject(err);
-        resolve();
-      }, onProgress);
+      docker.modem.followProgress(
+        stream,
+        (err, output) => {
+          clearTimeout(buildTimeout);
+          if (err) return reject(err);
+          resolve();
+        },
+        onProgress
+      );
     });
   });
 };
@@ -32,25 +36,33 @@ const handleInspectImage = async (imageName, retries = 5, delay = 200) => {
       return await image.inspect();
     } catch (err) {
       if (i === retries - 1) throw err;
-      await new Promise(r => setTimeout(r, delay));
+      await new Promise((r) => setTimeout(r, delay));
       delay *= 2;
     }
   }
-}
+};
 
-export const buildImage = async (hostPath, id, imageName,folderHash) => {
+export const buildImage = async (
+  hostPath,
+  id,
+  imageName,
+  folderHash,
+  baseName
+) => {
   try {
     const tarStream = tar.pack(hostPath);
     await buildImageStream(tarStream, imageName);
     const data = await handleInspectImage(imageName);
     await Image.create({
-      imageId : data.Id,
-      repoTag : data.RepoTags[0],
-      repoDigest : data.RepoDigests[0],
-      createdAt : data.Created,
-      size : data.Size,
+      imageId: data.Id,
+      repoTag: data.RepoTags[0],
+      repoDigest: data.RepoDigests[0],
+      createdAt: data.Created,
+      size: data.Size,
       folderHash: folderHash,
-    })
+      name: baseName,
+      version: 1,
+    });
   } catch (error) {
     console.error("Error building Docker image:", error);
     throw error;
