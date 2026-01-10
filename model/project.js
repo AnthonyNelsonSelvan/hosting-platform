@@ -24,6 +24,10 @@ const ProjectSchema = new Schema(
       type: String,
       unique: true,
     },
+    user: {
+      type: String,
+      required: true,
+    },
     // userId: {
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'User',
@@ -58,11 +62,11 @@ const ProjectSchema = new Schema(
       },
       networkUrl: {
         type: String,
-        select: false
+        select: false,
       },
       internalPath: {
         type: String,
-      }
+      },
     },
   },
   { timestamps: true }

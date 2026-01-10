@@ -20,13 +20,22 @@ const ContainerSchema = new Schema(
     image: { type: mongoose.Schema.Types.ObjectId, ref: "Image" },
     ports: [
       {
-        internal: { type: String, required: true, default: "pending" }, 
+        internal: { type: String, required: true, default: "pending" },
         external: { type: String, required: true, default: "pending" },
         protocol: { type: String, default: "tcp" },
       },
     ],
     envVariables: [String],
-    volumes: [{ name: String, volume: String }],
+    volumes: [
+      {
+        name: String,
+        volume: String,
+        type: {
+          type: String,
+          enum: ["file", "folder"],
+        },
+      },
+    ],
     memoryLimit: {
       type: Number,
       default: 512 * 1024 * 1024, // 512MB

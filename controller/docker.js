@@ -135,7 +135,7 @@ const handleCreateContainer = async (req, res) => {
     }
 
     const baseUrl = path.normalize(net.folderPath);
-    const internalUrl = path.normalize(net.internalPath);
+    // const internalUrl = path.normalize(net.internalPath);
     const network = net.networkName;
 
     draftContainer = await Container.create({
@@ -156,7 +156,7 @@ const handleCreateContainer = async (req, res) => {
       aliases,
       network,
       baseUrl,
-      internalUrl,
+      // internalUrl,
       containerName,
       envVariables
     );

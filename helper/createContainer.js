@@ -9,7 +9,7 @@ const createContainer = async (
   aliases,
   network,
   baseUrl, //hostPath
-  internalUrl,
+  // internalUrl,
   containerName,
   envVariables
 ) => {
@@ -29,9 +29,21 @@ const createContainer = async (
   if (volumes) {
     volumes.forEach((vol) => {
       const hostPath = path.join(baseUrl, safeImageName, vol.name);
-      const internalPath = path.join(internalUrl, safeImageName, vol.name);
-      if (!fs.existsSync(internalPath)) { //making a folder within the volumed folder of the container
-        fs.mkdirSync(internalPath, { recursive: true });
+      if (vol.type === "folder") {
+        if (!fs.existsSync(hostPath)) {
+          fs.mkdirSync(hostPath, { recursive: true });
+        }
+      }
+
+      else if (vol.type === "file") {
+        const parentDir = path.dirname(hostPath);
+        if (!fs.existsSync(parentDir)) {
+          fs.mkdirSync(parentDir, { recursive: true });
+        }
+
+        if (!fs.existsSync(hostPath)) {
+          fs.appendFileSync(hostPath, "");
+        }
       }
       containerVolumes.push(`${hostPath}:${vol.volume}`);
       declaredVolumes[vol.volume] = {};
@@ -40,8 +52,10 @@ const createContainer = async (
 
   containerNetwork[network] = { Aliases: [aliases] };
 
+  let container;
+
   try {
-    const container = await docker.createContainer({
+    container = await docker.createContainer({
       Image: image,
       name: containerName,
       Env: envVariables || [],
@@ -83,6 +97,9 @@ const createContainer = async (
     });
     return { containerDetails, portDetails };
   } catch (error) {
+    if (container) {
+      await container.remove();
+    }
     throw error;
   }
 };

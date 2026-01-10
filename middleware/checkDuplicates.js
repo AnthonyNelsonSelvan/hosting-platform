@@ -1,5 +1,6 @@
 import Folder from "../model/folder.js";
 import Image from "../model/image.js";
+import Project from "../model/project.js";
 
 const checkDuplicateFolder = async (req, res, next) => {
   const { user, project, folder, imageName } = req.params;
@@ -16,6 +17,10 @@ const checkDuplicateFolder = async (req, res, next) => {
     return res.status(400).json({ message: "Invalid Image Name." });
   }
   try {
+    const isProjectThere = await Project.findOne({name: project, user: user});
+    if(!isProjectThere){
+      return res.status(400).json({message: "Please make a project first."})
+    }
     const isValid = await handleCheckDuplicateImage(imageName);
     if (isValid.valid === false) {
       return res.status(400).json({ message: isValid.message });

@@ -5,6 +5,7 @@ import { createOrGetNetwork } from "../helper/createNetwork.js";
 import docker from "../connection/docker.js";
 import fs from "fs/promises";
 import Container from "../model/container.js";
+import deleteNetwork from "../helper/deleteNetwork.js";
 
 const handleCreateProject = async (req, res) => {
   const {
@@ -15,7 +16,9 @@ const handleCreateProject = async (req, res) => {
     version,
     username,
     password,
+    user, //req.user
   } = req.body;
+  let projectDB;
   try {
     const isProjectThere = await Project.findOne({ name: name });
 
@@ -23,11 +26,12 @@ const handleCreateProject = async (req, res) => {
       return res.status(400).json({ message: "Project name taken." });
     }
 
-    const projectDB = new Project({
+    projectDB = new Project({
       name: name,
       dbMode: internalOrExternalDB,
-      folderPath: path.join(process.env.HOST_UPLOAD_ROOT, "nelson", name), //can update this later
-      internalPath: path.join(process.cwd(), "uploads", "nelson", name), //i'll get user with req.user
+      folderPath: path.join(process.env.HOST_UPLOAD_ROOT, user, name), //can update this later
+      internalPath: path.join(process.cwd(), "uploads", user, name), //i'll get user with req.user
+      user: user,
     });
 
     const networkName = `host_net_${projectDB._id}`;
@@ -78,6 +82,11 @@ const handleCreateProject = async (req, res) => {
     });
   } catch (error) {
     console.error("Error while creating project", error);
+
+    if (projectDB && projectDB._id) {
+      await Project.findByIdAndDelete(projectDB._id);
+    }
+
     return res.status(500).json({ message: "Something went wrong." });
   }
 };
@@ -108,6 +117,8 @@ const handleDeleteProject = async (req, res) => {
         }
 
         await dbContainer.remove();
+
+        await deleteNetwork(project.networkName);
       } catch (err) {
         console.log("Container already removed or not found");
       }
