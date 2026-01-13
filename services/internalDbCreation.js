@@ -1,5 +1,3 @@
-import createDbContainer from "../helper/createDbContainer.js";
-
 const createInternalDBForProject = async (
   version,
   dbName,
@@ -7,7 +5,6 @@ const createInternalDBForProject = async (
   user,
   password,
   project,
-  networkName
 ) => {
   let image, envVars, containerVolPath, volume, ports;
   switch (dbType) {
@@ -65,16 +62,9 @@ const createInternalDBForProject = async (
     default:
       throw new Error(`Unsupported Database Type: ${dbType}`);
   }
-  const { containerDetails, hostPath, internalPathForDb } = await createDbContainer(
-    image,
-    ports,
-    volume,
-    networkName,
-    envVars,
-    project
-  );
+
   const key = `${ports[0].port}/${ports[0].protocol}`;
-  return { containerDetails, hostPath, key, internalPathForDb };
+  return { key, image, ports, volume, envVars, project };
 };
 
 export default createInternalDBForProject;

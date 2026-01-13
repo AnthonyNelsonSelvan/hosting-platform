@@ -17,13 +17,9 @@ const checkDuplicateFolder = async (req, res, next) => {
     return res.status(400).json({ message: "Invalid Image Name." });
   }
   try {
-    const isProjectThere = await Project.findOne({name: project, user: user});
-    if(!isProjectThere){
-      return res.status(400).json({message: "Please make a project first."})
-    }
-    const isValid = await handleCheckDuplicateImage(imageName);
-    if (isValid.valid === false) {
-      return res.status(400).json({ message: isValid.message });
+    const isProjectThere = await Project.findOne({ name: project, user: user });
+    if (!isProjectThere) {
+      return res.status(400).json({ message: "Please make a project first." });
     }
     const existingFolder = await Folder.findOne({
       folderName: folder,
@@ -32,6 +28,10 @@ const checkDuplicateFolder = async (req, res, next) => {
     });
     if (existingFolder) {
       return res.status(409).json({ message: "Folder name already exist." });
+    }
+    const isValid = await handleCheckDuplicateImage(imageName);
+    if (isValid.valid === false) {
+      return res.status(400).json({ message: isValid.message });
     }
     req.baseName = isValid.baseName;
     req.params.imageName = isValid.imageName;

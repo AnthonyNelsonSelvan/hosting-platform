@@ -6,6 +6,7 @@ import docker from "../connection/docker.js";
 import fs from "fs/promises";
 import Container from "../model/container.js";
 import deleteNetwork from "../helper/deleteNetwork.js";
+import createDbContainer from "../helper/createDbContainer.js";
 
 const handleCreateProject = async (req, res) => {
   const {
@@ -42,7 +43,7 @@ const handleCreateProject = async (req, res) => {
     await projectDB.save();
 
     if (internalOrExternalDB === "internal") {
-      const { containerDetails, hostPath, key, internalPathForDb } =
+      const { key, image, ports, volume, envVars, project } =
         await createInternalDBForProject(
           version,
           dbName,
@@ -50,7 +51,15 @@ const handleCreateProject = async (req, res) => {
           username,
           password,
           name,
-          networkName
+        );
+      const { containerDetails, hostPath, internalPathForDb } =
+        await createDbContainer(
+          image,
+          ports,
+          volume,
+          networkName,
+          envVars,
+          project
         );
       let protocol = "tcp";
       if (dbType === "mongo") protocol = "mongodb";

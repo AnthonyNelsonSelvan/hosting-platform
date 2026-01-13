@@ -24,14 +24,13 @@ const handleUploadAndBuildImage = async (req, res) => {
     const filePath = path.dirname(req.file.path);
     const zipFileName = req.file.filename;
     try {
-      console.log(filePath);
       await unZipFiles(filePath, zipFileName, finalFolderName);
       const folder = await Folder.create({
         folderName: finalFolderName,
         projectFolder: project,
         destination: filePath,
         size: req.file.size,
-        user: user, //for ref
+        user: user, //req.user
       });
 
       const finalFilePath = path.join(filePath, finalFolderName);
