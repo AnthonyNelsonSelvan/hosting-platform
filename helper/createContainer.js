@@ -1,5 +1,5 @@
 import docker from "../connection/docker.js";
-import path from "path";
+import path, { resolve } from "path";
 import fs from "fs";
 
 const createContainer = async (
@@ -18,6 +18,13 @@ const createContainer = async (
   const containerVolumes = [];
   const declaredVolumes = {};
   const containerNetwork = {};
+  let restartPolicy;
+
+  if (isTesting) {
+    restartPolicy = { Name: "no" };
+  } else {
+    restartPolicy = { Name: "on-failure", MaximumRetryCount: 5 };
+  }
 
   ports.forEach((p) => {
     exposedPorts[`${p.port}/${p.protocol}`] = {};
@@ -63,10 +70,7 @@ const createContainer = async (
       AttachStdout: true,
       ExposedPorts: exposedPorts,
       HostConfig: {
-        RestartPolicy: {
-          Name: "on-failure",
-          MaximumRetryCount: 5,
-        },
+        RestartPolicy: restartPolicy,
         Binds: containerVolumes,
         Memory: 512 * 1024 * 1024,
         NanoCpus: 500000000,
@@ -77,12 +81,17 @@ const createContainer = async (
       },
     });
     await container.start();
+
+    if (isTesting) {
+      await new Promise((resolve) => setTimeout(resolve, 7000));
+    }
+
     const containerDetails = await container.inspect();
 
     if (isTesting) {
       return containerDetails;
     }
-    
+
     const portDetails = []; // getting needed port details to save in db
 
     ports.forEach((port) => {

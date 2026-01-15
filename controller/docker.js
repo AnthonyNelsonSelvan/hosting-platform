@@ -128,7 +128,9 @@ const handleCreateContainer = async (req, res) => {
       } catch (error) {
         return res.status(500).json({ message: "Unexpected error" });
       }
-      envVariables.push(`DATABASE_URL=${data.dbContainer.networkUrl}?authSource=admin`);
+      envVariables.push(
+        `DATABASE_URL=${data.dbContainer.networkUrl}?authSource=admin`
+      );
     }
 
     const baseUrl = path.normalize(net.folderPath);
@@ -157,8 +159,8 @@ const handleCreateContainer = async (req, res) => {
       envVariables
     );
 
-    (draftContainer.containerId = containerDetails.Id),
-      (draftContainer.ports = portDetails);
+    draftContainer.containerId = containerDetails.Id;
+    draftContainer.ports = portDetails;
     await draftContainer.save();
 
     res.status(201).json({ message: "Container created successfully" });

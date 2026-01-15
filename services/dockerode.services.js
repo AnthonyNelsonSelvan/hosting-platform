@@ -45,10 +45,12 @@ const handleInspectImage = async (imageName, retries = 5, delay = 200) => {
 export const buildImage = async (hostPath, id, imageName, folderHash) => {
   try {
     const baseName = imageName.split(":")[0];
+    const base = imageName.split(":")[1];
+    const version = Number(base.slice(1));
     const tarStream = tar.pack(hostPath);
     await buildImageStream(tarStream, imageName);
     const data = await handleInspectImage(imageName);
-    await Image.create({
+    const image = await Image.create({
       imageId: data.Id,
       repoTag: data.RepoTags[0],
       repoDigest: data.RepoDigests[0],
@@ -56,8 +58,9 @@ export const buildImage = async (hostPath, id, imageName, folderHash) => {
       size: data.Size,
       folderHash: folderHash,
       name: baseName,
-      version: 1,
+      version: version,
     });
+    return image;
   } catch (error) {
     console.error("Error building Docker image:", error);
     throw error;
