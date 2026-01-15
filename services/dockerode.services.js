@@ -42,14 +42,9 @@ const handleInspectImage = async (imageName, retries = 5, delay = 200) => {
   }
 };
 
-export const buildImage = async (
-  hostPath,
-  id,
-  imageName,
-  folderHash,
-  baseName
-) => {
+export const buildImage = async (hostPath, id, imageName, folderHash) => {
   try {
+    const baseName = imageName.split(":")[0];
     const tarStream = tar.pack(hostPath);
     await buildImageStream(tarStream, imageName);
     const data = await handleInspectImage(imageName);

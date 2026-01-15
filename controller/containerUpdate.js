@@ -2,10 +2,14 @@ import path from "path";
 import unZipFiles from "../utils/unzipper.js";
 import Folder from "../model/folder.js";
 import { ignore } from "../helper/ignore.js";
+import { buildImage } from "../services/dockerode.services.js";
+import Container from "../model/container.js";
+import createContainer from "../helper/createContainer.js";
 
 const handleUpdateContainer = async (req, res) => {
-  const { isVolumeChanged, volumes, isEnvChanged, envVariables } = req.body;
-  const { user, project } = req.params;
+  const { isVolumeChanged, newVolumes, isEnvChanged, newEnvVariables } =
+    req.body;
+  const { user } = req.params;
   if (!req.file) {
     return res
       .status(400)
@@ -35,6 +39,37 @@ const handleUpdateContainer = async (req, res) => {
       message: `This folder has been already created as image use ${isDuplicate.repoTag}.`,
     });
   }
+
+  const hostPath = path.join(req.project.folderPath, finalFolderName);
+
+  const image = Container.findById(req.containerDoc._id).populate("image");
+  const imageName = `${image.name}:v${image.version + 1}`;
+
+  await buildImage(hostPath, folder._id, imageName, image.folderHash);
+
+  const ports = [];
+  req.containerDoc.ports.map((p) =>
+    ports.push({ port: p.internal, protocol: p.protocol })
+  );
+
+  const volumes = isVolumeChanged ? newVolumes : req.containerDoc.volumes;
+  const envVariables = isEnvChanged
+    ? newEnvVariables
+    : req.containerDoc.envVariables;
+
+  const testContainerName = `${req.containerDoc.name}_testing`;
+
+  const { containerDetails } = await createContainer(
+    imageName,
+    ports,
+    volumes,
+    "testing",
+    req.project.networkName,
+    req.project.folderPath,
+    testContainerName,
+    envVariables,
+    true
+  );
 };
 
 export default handleUpdateContainer;

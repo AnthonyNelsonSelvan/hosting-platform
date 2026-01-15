@@ -33,7 +33,6 @@ const checkDuplicateFolder = async (req, res, next) => {
     if (isValid.valid === false) {
       return res.status(400).json({ message: isValid.message });
     }
-    req.baseName = isValid.baseName;
     req.params.imageName = isValid.imageName;
     next();
   } catch (error) {
@@ -59,9 +58,8 @@ const handleCheckDuplicateImage = async (imageName) => {
   if (exist) {
     return { valid: false, message: "Image name is taken." };
   }
-  const baseName = imageName;
   imageName = `${imageName}:v1`;
-  return { valid: true, imageName: imageName, baseName: baseName };
+  return { valid: true, imageName: imageName};
 };
 
 export default checkDuplicateFolder;

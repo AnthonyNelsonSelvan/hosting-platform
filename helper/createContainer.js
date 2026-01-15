@@ -8,10 +8,10 @@ const createContainer = async (
   volumes,
   aliases,
   network,
-  baseUrl, //hostPath
-  // internalUrl,
+  basePath, //hostPath
   containerName,
-  envVariables
+  envVariables,
+  isTesting
 ) => {
   const exposedPorts = {};
   const portBindings = {};
@@ -24,18 +24,16 @@ const createContainer = async (
     portBindings[`${p.port}/${p.protocol}`] = [{ HostPort: "0" }];
   });
 
-  const safeImageName = image.replace(/:/g, "-");
+  let safeImageName = `${image.split(":")[0]}-${aliases}`;
 
   if (volumes) {
     volumes.forEach((vol) => {
-      const hostPath = path.join(baseUrl, safeImageName, vol.name);
+      const hostPath = path.join(basePath, safeImageName, vol.name);
       if (vol.type === "folder") {
         if (!fs.existsSync(hostPath)) {
           fs.mkdirSync(hostPath, { recursive: true });
         }
-      }
-
-      else if (vol.type === "file") {
+      } else if (vol.type === "file") {
         const parentDir = path.dirname(hostPath);
         if (!fs.existsSync(parentDir)) {
           fs.mkdirSync(parentDir, { recursive: true });
@@ -81,6 +79,10 @@ const createContainer = async (
     await container.start();
     const containerDetails = await container.inspect();
 
+    if (isTesting) {
+      return containerDetails;
+    }
+    
     const portDetails = []; // getting needed port details to save in db
 
     ports.forEach((port) => {
@@ -103,4 +105,5 @@ const createContainer = async (
     throw error;
   }
 };
+
 export default createContainer;
