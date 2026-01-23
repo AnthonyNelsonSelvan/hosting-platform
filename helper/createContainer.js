@@ -9,9 +9,8 @@ const createContainer = async (
   aliases,
   network,
   basePath, //hostPath
-  containerName,
   envVariables,
-  isTesting
+  updating = false
 ) => {
   const exposedPorts = {};
   const portBindings = {};
@@ -20,7 +19,7 @@ const createContainer = async (
   const containerNetwork = {};
   let restartPolicy;
 
-  if (isTesting) {
+  if (updating) {
     restartPolicy = { Name: "no" };
   } else {
     restartPolicy = { Name: "on-failure", MaximumRetryCount: 5 };
@@ -62,7 +61,6 @@ const createContainer = async (
   try {
     container = await docker.createContainer({
       Image: image,
-      name: containerName,
       Env: envVariables || [],
       Volumes: declaredVolumes,
       AttachStderr: true,
@@ -82,15 +80,9 @@ const createContainer = async (
     });
     await container.start();
 
-    if (isTesting) {
-      await new Promise((resolve) => setTimeout(resolve, 7000));
-    }
+    await new Promise((resolve) => setTimeout(resolve, 7000));
 
     const containerDetails = await container.inspect();
-
-    if (isTesting) {
-      return containerDetails;
-    }
 
     const portDetails = []; // getting needed port details to save in db
 

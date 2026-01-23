@@ -4,7 +4,7 @@ const createInternalDBForProject = async (
   dbType,
   user,
   password,
-  project,
+  project
 ) => {
   let image, envVars, containerVolPath, volume, ports;
   switch (dbType) {
@@ -60,7 +60,9 @@ const createInternalDBForProject = async (
       break;
 
     default:
-      throw new Error(`Unsupported Database Type: ${dbType}`);
+      const err = new Error("DB unsupported.");
+      err.statusCode = 400;
+      throw err;
   }
 
   const key = `${ports[0].port}/${ports[0].protocol}`;

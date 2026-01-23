@@ -9,6 +9,7 @@ import projectRoutes from "./routes/project.js";
 
 import listenToDockerEvents from "./hydration/dockerEvents.js";
 import startListeningToLogs from "./hydration/hydrateErrLogStream.js";
+import errorHandler from "./middleware/errorHandler.js";
 
 connectMongoose("mongodb://127.0.0.1:27017/hosting");
 
@@ -20,6 +21,8 @@ app.use(express.json());
 app.use("/api/docker", dockerRouter);
 app.use("/api/uploads", folderRoutes);
 app.use("/api/project", projectRoutes);
+
+app.use(errorHandler);
 
 app.listen(3000, async () => {
   console.log("server started at port 3000");

@@ -19,9 +19,16 @@ const handleCreateProject = async (req, res) => {
     password,
     user, //req.user
   } = req.body;
+
+  if (!name) {
+    return res
+      .status(400)
+      .json({ message: "Please fill out the required fields" });
+  }
+
   let projectDB;
   try {
-    const isProjectThere = await Project.findOne({ name: name });
+    const isProjectThere = await Project.findOne({ name: name, user: user });
 
     if (isProjectThere) {
       return res.status(400).json({ message: "Project name taken." });
@@ -40,18 +47,29 @@ const handleCreateProject = async (req, res) => {
     const network = await createOrGetNetwork(networkName);
 
     projectDB.networkName = network;
-    await projectDB.save();
 
     if (internalOrExternalDB === "internal") {
-      const { key, image, ports, volume, envVars, project } =
+      const supportedDBs = ["postgres", "mysql", "mongo"];
+      if (!supportedDBs.includes(dbType)) {
+        return res.status(400).json({ message: "DB unsupported." });
+      }
+      if (!dbName || !version || !username || !password) {
+        return res
+          .status(400)
+          .json({ message: "Fill out the required fields" });
+      }
+      const { key, image, ports, volume, envVars, project, error } =
         await createInternalDBForProject(
           version,
           dbName,
           dbType,
           username,
           password,
-          name,
+          name
         );
+      if (error) {
+        return res.status(error.status).json({ message: error.message });
+      }
       const { containerDetails, hostPath, internalPathForDb } =
         await createDbContainer(
           image,

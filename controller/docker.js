@@ -1,7 +1,6 @@
 import path from "path";
 import unZipFiles from "../utils/unzipper.js";
 import Folder from "../model/folder.js";
-import { buildImage } from "../services/dockerode.services.js";
 import hashDirectory from "../helper/hashFolder.js";
 import { ignore } from "../helper/ignore.js";
 import Image from "../model/image.js";
@@ -12,7 +11,16 @@ import Project from "../model/project.js";
 import createContainer from "../helper/createContainer.js";
 import Container from "../model/container.js";
 import dockerOperation from "../helper/dockerOperation.js";
+import docker from "../connection/docker.js";
+import { buildImageBackground } from "../backgroundFunc/buildImage.js";
+import attachLogs from "../utils/logManager.js";
+import {
+  getFrontendAndBackendPort,
+  writeSiteConfig,
+} from "../services/makeNginxConf.js";
 
+
+//TODO : Admin feature to be able to pruneImages so < none > will be removed.
 const handleUploadAndBuildImage = async (req, res) => {
   const { project, user, imageName, folder: finalFolderName } = req.params;
   {
@@ -34,7 +42,7 @@ const handleUploadAndBuildImage = async (req, res) => {
       });
 
       const finalFilePath = path.join(filePath, finalFolderName);
-      const folderHash = hashDirectory(finalFilePath, ignore);
+      const folderHash = await hashDirectory(finalFilePath, ignore);
       const isDuplicate = await Image.findOne({ folderHash: folderHash });
 
       if (isDuplicate) {
@@ -66,10 +74,10 @@ const handleUploadAndBuildImage = async (req, res) => {
         process.env.HOST_UPLOAD_ROOT,
         user,
         project,
-        finalFolderName
+        finalFolderName,
       );
 
-      buildImage(hostPath, folder._id, imageName, folderHash);
+      buildImageBackground(hostPath, folder._id, imageName, folderHash);
       res.status(201).send("File uploaded & extracted Successfully!");
     } catch (err) {
       console.log("Unzip failed", err);
@@ -81,25 +89,16 @@ const handleUploadAndBuildImage = async (req, res) => {
 const handleCreateContainer = async (req, res) => {
   let draftContainer = null;
   try {
-    const {
+    let {
       image,
       ports,
       volumes,
       aliases,
-      containerName,
       netName,
       containerType,
       envVariables,
       useInternalDB,
     } = req.body;
-
-    const validContainer = await Container.findOne({ name: containerName });
-
-    if (validContainer) {
-      return res
-        .status(400)
-        .json({ message: "Container name is taken try another" });
-    }
 
     const exist = await Image.findOne({ repoTag: image });
     if (!exist) {
@@ -116,11 +115,31 @@ const handleCreateContainer = async (req, res) => {
         .json({ message: `Something Went Wrong, please refresh and check.` });
     }
 
+    envVariables = Array.isArray(envVariables) ? envVariables : [];
+
+    const blocked = ["PATH", "HOME", "NODE_OPTIONS"];
+    if (envVariables) {
+      for (let env of envVariables) {
+        if (!env.includes("="))
+          return res
+            .status(400)
+            .json({ message: `Found an invalid env ${env}` });
+        const [key, value] = env.split("=");
+        if (blocked.includes(key)) {
+          return res.status(400).json({ message: `Env ${key} is not allowed` });
+        }
+        if (!key || value === undefined)
+          return res
+            .status(400)
+            .json({ message: `Found an invalid env ${env}` }); // no KEY
+      }
+    }
+
     if (useInternalDB) {
       let data;
       try {
         data = await Project.findById({ _id: net._id }).select(
-          "+dbContainer.networkUrl"
+          "+dbContainer.networkUrl",
         );
         if (!data || !data.dbContainer) {
           return res.status(404).json({ message: "This project has no DB" });
@@ -129,16 +148,15 @@ const handleCreateContainer = async (req, res) => {
         return res.status(500).json({ message: "Unexpected error" });
       }
       envVariables.push(
-        `DATABASE_URL=${data.dbContainer.networkUrl}?authSource=admin`
+        `DATABASE_URL=${data.dbContainer.networkUrl}?authSource=admin`,
       );
+      //TODO : on get container's env route DATABASE_URL should be filtered out before going to the client
     }
 
     const baseUrl = path.normalize(net.folderPath);
-    // const internalUrl = path.normalize(net.internalPath);
     const network = net.networkName;
 
     draftContainer = await Container.create({
-      name: containerName,
       aliasesName: aliases,
       type: containerType,
       project: net._id,
@@ -155,13 +173,28 @@ const handleCreateContainer = async (req, res) => {
       aliases,
       network,
       baseUrl,
-      containerName,
-      envVariables
+      envVariables,
     );
+
+    if (!containerDetails.State.Running) {
+      await docker.getContainer(containerDetails.Id).remove({ force: true });
+      await draftContainer.deleteOne();
+      return res.status(400).json({ message: "Container failed to start" });
+    }
+
+    const name = containerDetails.Name.slice(1); //because we get name with a slash like `/example_name`
 
     draftContainer.containerId = containerDetails.Id;
     draftContainer.ports = portDetails;
+    draftContainer.name = name;
+    draftContainer.status = "running";
     await draftContainer.save();
+
+    const { frontend, backend } = await getFrontendAndBackendPort(net._id);
+
+    await writeSiteConfig("localhost", frontend, backend);
+
+    attachLogs(name, net.internalPath, aliases);
 
     res.status(201).json({ message: "Container created successfully" });
   } catch (error) {

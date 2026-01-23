@@ -3,7 +3,7 @@ node_modules/
 
 uploads
 dbs
-
+nginxconfs
 
 # Logs
 logs/

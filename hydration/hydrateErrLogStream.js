@@ -32,7 +32,8 @@ const startListeningToLogs = async () => {
           }
           throw error;
         }
-        if (!inspectData.State.Running) { //checks if still running
+        if (!inspectData.State.Running) {
+          //checks if still running
           container.status = "stopped";
           await container.save();
           continue;

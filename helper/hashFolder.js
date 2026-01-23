@@ -8,7 +8,7 @@ function shouldIgnore(filePath, patterns) {
 }
 
 
-function hashDirectory(rootDir, ignore) {
+async function hashDirectory(rootDir, ignore) {
     const hash = createHash("sha256");
 
     function walk(currentDir) {

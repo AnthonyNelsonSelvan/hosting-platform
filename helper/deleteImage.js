@@ -11,7 +11,7 @@ async function deleteImage(id){
         }
         const containerUsing = await Container.findOne({image: imageExists._id});
         if(containerUsing){
-            return {status: 400, message: "Can not delete image, There are container using this image."}
+            return {status: 409, message: "Can not delete image, There are container using this image."}
         }
         const image = docker.getImage(id);
         await image.remove({force: true});

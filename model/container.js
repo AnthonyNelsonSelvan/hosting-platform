@@ -3,11 +3,11 @@ import mongoose, { Schema, model } from "mongoose";
 const ContainerSchema = new Schema(
   {
     containerId: { type: String, unique: true, sparse: true },
-    name: { type: String, required: true },
+    name: { type: String },
     aliasesName: { type: String, required: true, trim: true },
     type: {
       type: String,
-      enum: ["frontend", "backend", "database", "other"],
+      enum: ["frontend", "backend", "other"],
       required: true,
       default: "backend",
     },
@@ -18,14 +18,20 @@ const ContainerSchema = new Schema(
     },
     // user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     image: { type: mongoose.Schema.Types.ObjectId, ref: "Image" },
-    ports: [
-      {
-        internal: { type: String, required: true, default: "pending" },
-        external: { type: String, required: true, default: "pending" },
-        protocol: { type: String, default: "tcp" },
-      },
-    ],
-    envVariables: [String],
+    ports: {
+      type: [
+        {
+          internal: { type: String, required: true, default: "pending" },
+          external: { type: String, required: true, default: "pending" },
+          protocol: { type: String, default: "tcp" },
+        },
+      ],
+      select: false,
+    },
+    envVariables: {
+      type: [String],
+      select: false,
+    },
     volumes: [
       {
         name: String,
@@ -53,7 +59,7 @@ const ContainerSchema = new Schema(
     status: { type: String, default: "pending" },
     createdAt: { type: Date, default: Date.now },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Container = model("Container", ContainerSchema);

@@ -8,4 +8,4 @@
 | CPU/Memory usage                            | Docker Stats API   |
 | Container ID, Name, Port                    | Docker Inspect     |
 
-streanrehydration
+3)put keyword in env itself and like secret (mask it and send to frontend), constant (not changable).
