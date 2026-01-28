@@ -1,6 +1,4 @@
 function mergeEnv(newEnv, oldEnv) {
-  console.log(newEnv);
-  console.log(oldEnv);
   const incomingMap = new Map();
   newEnv.forEach((env) => {
     let [key, ...rest] = env.split("=");
@@ -39,7 +37,7 @@ function mergeEnv(newEnv, oldEnv) {
       return `${key}=${newVal}`;
     })
     .filter(Boolean);
-    console.log(result);
+  console.log(result);
 
   incomingMap.forEach((value, key) => {
     const exist = oldEnv.some((env) => env.startsWith(key + "="));
@@ -47,7 +45,7 @@ function mergeEnv(newEnv, oldEnv) {
       result.push(`${key}=${value}`);
     }
   });
-  console.log("on Function :",result)
+  console.log("on Function :", result);
   return result;
 }
 

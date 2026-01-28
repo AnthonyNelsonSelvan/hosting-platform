@@ -18,7 +18,6 @@ import {
   getFrontendAndBackendPort,
   writeSiteConfig,
 } from "../services/makeNginxConf.js";
-import { error } from "console";
 
 
 //TODO : Admin feature to be able to pruneImages so < none > will be removed.
