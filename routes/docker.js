@@ -7,16 +7,19 @@ import {
   handleUploadAndBuildImage,
 } from "../controller/docker.js";
 import upload from "../utils/multer.js";
-import handleUpdateContainer from "../controller/containerUpdate.js";
+import {
+  handleUpdateContainer,
+  handleGetEnv,
+} from "../controller/containerUpdate.js";
 import checkUpdateValidity from "../middleware/updateValidity.js";
 
 const router = Router();
 
 router.post(
-  "/upload/:user/:project/:folder/:imageName",
+  "/upload/:user/:project/:imageName",
   checkDuplicateFolder,
   upload.single("file"),
-  handleUploadAndBuildImage
+  handleUploadAndBuildImage,
 );
 
 router.post("/create/container", handleCreateContainer);
@@ -29,7 +32,9 @@ router.post(
   "/update/container/:user/:project/:_id",
   checkUpdateValidity,
   upload.single("file"),
-  handleUpdateContainer
+  handleUpdateContainer,
 );
+
+router.get("/get/envVariables/:containerId", handleGetEnv);
 
 export default router;

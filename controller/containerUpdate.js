@@ -16,12 +16,13 @@ import {
 } from "../services/makeNginxConf.js";
 import fs from "fs/promises";
 import attachLogs from "../utils/logManager.js";
+import mergeEnv from "../utils/mergeEnv.js";
 
 const handleUpdateContainer = async (req, res) => {
   //can improve here
   //upload and unzip
-  const { isVolumeChanged, newVolumes, isEnvChanged, newEnvVariables } =
-    req.body;
+  let { isVolumeChanged, newVolumes, isEnvChanged, newEnvVariables } = req.body;
+  newEnvVariables = JSON.parse(newEnvVariables);
   const { user } = req.params;
   if (!req.file) {
     return res
@@ -56,40 +57,52 @@ const handleUpdateContainer = async (req, res) => {
       });
     }
 
+    const container = await Container.findById(req.containerDoc._id)
+      .populate("image")
+      .select("+ports")
+      .select("+envVariables");
+
     if (isEnvChanged) {
-      const blocked = ["PATH", "HOME", "NODE_OPTIONS"];
       if (newEnvVariables) {
+        const blocked = ["PATH", "HOME", "NODE_OPTIONS"];
+        console.log(typeof newEnvVariables);
+        console.log(Array.isArray(newEnvVariables));
         for (let env of newEnvVariables) {
+          console.log(env);
           if (!env.includes("=")) {
+            await handleDeleteFolder(folder._id);
+            console.log("here 1");
+            return res
+              .status(400)
+              .json({ message: `Found an invalid env ${env}` });
+          }
+
+          const [key, ...rest] = env.split("=");
+          const value = rest.join("=");
+
+          if (!key || value === undefined) {
+            console.log(key, "and", value);
             await handleDeleteFolder(folder._id);
             return res
               .status(400)
               .json({ message: `Found an invalid env ${env}` });
           }
-          const [key, value] = env.split("=");
-          if (blocked.includes(key)) {
+
+          if (blocked.includes(key.toUpperCase())) {
             await handleDeleteFolder(folder._id);
             return res
               .status(400)
               .json({ message: `Env ${key} is not allowed` });
           }
-          if (!key || value === undefined) {
-            await handleDeleteFolder(folder._id);
-            return res
-              .status(400)
-              .json({ message: `Found an invalid env ${env}` });
-          }
         }
+
+        newEnvVariables = mergeEnv(newEnvVariables, container.envVariables);
       }
     }
 
     //image building
     const hostPath = path.join(req.project.folderPath, finalFolderName);
 
-    const container = await Container.findById(req.containerDoc._id)
-      .populate("image")
-      .select("+ports")
-      .select("+envVariables");
     const imageName = `${container.image.name}:v${container.image.version + 1}`;
 
     image = await buildImage(hostPath, folder._id, imageName, folderHash);
@@ -176,9 +189,47 @@ const handleUpdateContainer = async (req, res) => {
       await handleDeleteFolder(folder._id);
       if (image?.imageId) await deleteImage(image.imageId);
     } catch {}
+    if (err.message.includes("Zip file should contain only one file.")) {
+      res
+        .status(400)
+        .json({ message: "Zip file should contain only one Folder." });
+    }
+    if (err.message.includes("Duplicate env key")) {
+      return res.status(409).json({ message: err.message });
+    }
     console.log("Error creating container", err);
     res.status(500).json({ message: "Somethig went Wrong." });
   }
 };
 
-export default handleUpdateContainer;
+const handleGetEnv = async (req, res) => {
+  const { containerId } = req.params;
+  if (!containerId) {
+    return res
+      .status(404)
+      .json({ message: "No containerId was given in the request." });
+  }
+  try {
+    const container =
+      await Container.findById(containerId).select("+envVariables");
+
+    if (!container) {
+      return res.status(404).json({ message: "No containerId was found." });
+    }
+    const envVariables = container.envVariables;
+    let finalEnv = envVariables.map((env) => {
+      let [key, ...rest] = env.split("=");
+      let value = rest.join("=");
+      if (key.toLowerCase().includes("secret")) {
+        value = "**********";
+      }
+      return `${key}=${value}`;
+    });
+    return res.status(200).json({ envData: finalEnv });
+  } catch (error) {
+    console.error("Something went wrong fetching env: ", error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+export { handleUpdateContainer, handleGetEnv };

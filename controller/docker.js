@@ -18,11 +18,12 @@ import {
   getFrontendAndBackendPort,
   writeSiteConfig,
 } from "../services/makeNginxConf.js";
+import { error } from "console";
 
 
 //TODO : Admin feature to be able to pruneImages so < none > will be removed.
 const handleUploadAndBuildImage = async (req, res) => {
-  const { project, user, imageName, folder: finalFolderName } = req.params;
+  const { project, user, imageName } = req.params;
   {
     if (!req.file) {
       return res
@@ -31,6 +32,7 @@ const handleUploadAndBuildImage = async (req, res) => {
     }
     const filePath = path.dirname(req.file.path);
     const zipFileName = req.file.filename;
+    const finalFolderName = String(Date.now())
     try {
       await unZipFiles(filePath, zipFileName, finalFolderName);
       const folder = await Folder.create({
@@ -80,6 +82,9 @@ const handleUploadAndBuildImage = async (req, res) => {
       buildImageBackground(hostPath, folder._id, imageName, folderHash);
       res.status(201).send("File uploaded & extracted Successfully!");
     } catch (err) {
+      if(err.message.includes("Zip file should contain only one file.")){
+        res.status(400).json({message: "Zip file should contain only one Folder."})
+      }
       console.log("Unzip failed", err);
       res.status(500).send("Failed To extract zip.");
     }
@@ -148,9 +153,8 @@ const handleCreateContainer = async (req, res) => {
         return res.status(500).json({ message: "Unexpected error" });
       }
       envVariables.push(
-        `DATABASE_URL=${data.dbContainer.networkUrl}?authSource=admin`,
+        `CONST_SECRET_DATABASE_URL=${data.dbContainer.networkUrl}?authSource=admin`,
       );
-      //TODO : on get container's env route DATABASE_URL should be filtered out before going to the client
     }
 
     const baseUrl = path.normalize(net.folderPath);

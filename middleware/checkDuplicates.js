@@ -1,14 +1,9 @@
-import Folder from "../model/folder.js";
 import Image from "../model/image.js";
 import Project from "../model/project.js";
 
 const checkDuplicateFolder = async (req, res, next) => {
-  const { user, project, folder, imageName } = req.params;
-  const invalids = /[<>:"/\\|?*.\x00-\x1F]/;
+  const { user, project, imageName } = req.params;
   const dockerInvalids = /[<>"/\\|?*\x00\x1F]/;
-  if (invalids.test(project) || invalids.test(user) || invalids.test(folder)) {
-    return res.status(400).json({ message: "You have added invalid symbols." });
-  }
   if (
     dockerInvalids.test(imageName) ||
     /[A-Z]/.test(imageName) ||
@@ -20,14 +15,6 @@ const checkDuplicateFolder = async (req, res, next) => {
     const isProjectThere = await Project.findOne({ name: project, user: user });
     if (!isProjectThere) {
       return res.status(400).json({ message: "Please make a project first." });
-    }
-    const existingFolder = await Folder.findOne({
-      folderName: folder,
-      projectFolder: project,
-      user: user,
-    });
-    if (existingFolder) {
-      return res.status(409).json({ message: "Folder name already exist." });
     }
     const isValid = await handleCheckDuplicateImage(imageName);
     if (isValid.valid === false) {
